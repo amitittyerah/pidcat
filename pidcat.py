@@ -28,7 +28,11 @@ import re
 import subprocess
 from subprocess import PIPE
 
+from os.path import expanduser
+from os.path import isfile
 
+HOME = expanduser('~')
+PIDCAT_SRC = '%s/%s' % (HOME, '.pidcat')
 LOG_LEVELS = 'VDIWEF'
 LOG_LEVELS_MAP = dict([(LOG_LEVELS[i], i) for i in range(len(LOG_LEVELS))])
 parser = argparse.ArgumentParser(description='Filter logcat by package name')
@@ -138,7 +142,14 @@ PID_DEATH = re.compile(r'^Process ([a-zA-Z0-9._]+) \(pid (\d+)\) has died.?$')
 LOG_LINE  = re.compile(r'^([A-Z])/(.+?)\( *(\d+)\): (.*?)$')
 BUG_LINE  = re.compile(r'.*nativeGetEnabledTags.*')
 
-adb_command = ['adb']
+if isfile(PIDCAT_SRC):
+    with open(PIDCAT_SRC) as pidcat_src:
+      adb_exec = pidcat_src.readlines()[0].rstrip('\n')
+else:
+    print "PIDCAT src was not found at %s " % PIDCAT_SRC
+    sys.exit(1)
+
+adb_command = [adb_exec]
 if args.device_serial:
   adb_command.extend(['-s', args.device_serial])
 if args.use_device:
@@ -146,6 +157,8 @@ if args.use_device:
 if args.use_emulator:
   adb_command.append('-e')
 adb_command.append('logcat')
+
+print adb_command
 
 adb = subprocess.Popen(adb_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 pids = set()
